@@ -1,0 +1,46 @@
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE players(nickname text primary key, email text not null, password_hash text not null,
+avatar_img text, rating integer not null);
+CREATE TABLE tournament_statuses(
+    id integer primary key autoincrement,
+    name text not null
+);
+CREATE TABLE tournaments(
+    id integer primary key autoincrement,
+    name text not null,
+    description text,
+    number_of_players integer not null,
+    date date,
+    organizer integer,
+    status integer not null,
+    foreign key(organizer) references players(nickname),
+    foreign key(status) references tournament_statuses(id)
+);
+CREATE TABLE match_statuses(
+    id integer primary key,
+    name text not null
+);
+CREATE TABLE matches(
+    id integer primary key,
+    tournament integer not null,
+    date date,
+    number_in_grid integer not null,
+    player1 text,
+    player2 text,
+    status integer not null,
+    foreign key(player1) references players(nickname),
+    foreign key(player2) references players(nickname),
+    foreign key(tournament) references tournaments(id),
+    foreign key(status) references match_statuses(id)
+);
+CREATE TABLE participants_and_results(
+    player integer,
+    tournament integer,
+    place integer,
+    foreign key(player) references players(nickname),
+    foreign key(tournament) references tournaments(id),
+    primary key (player, tournament)
+);
+DELETE FROM sqlite_sequence;
+COMMIT;
