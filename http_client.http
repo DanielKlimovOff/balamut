@@ -1,0 +1,14 @@
+POST http://localhost:3030/player/register HTTP/1.1
+content-type: application/json
+
+{
+    "nickname": "danil",
+    "email": "danil@gmail.com",
+    "password_hash": "adsfosndvosjdijfosdf"
+}
+
+
+
+
+
+DELETE  http://localhost:3030/player/danil/delete HTTP/1.1

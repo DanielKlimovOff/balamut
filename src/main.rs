@@ -25,9 +25,10 @@ mod filters {
     use crate::{handlers, models::{Database, Player, PlayerRegisterForm}};
 
     pub fn balamut(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-        player(db.clone()).or(warp::any()
-            .and(with_db(db))
-            .and_then(handlers::test_fn))
+        player(db.clone())
+        // player(db.clone()).or(warp::any()
+        //     .and(with_db(db))
+        //     .and_then(handlers::test_fn))
     }
 
     fn player(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
@@ -47,31 +48,37 @@ mod filters {
     }
 
     fn player_nickname(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
-        let get_player_info = warp::path::param::<String>()
+        player_info_by_nickname(db.clone())
+            .or(player_update(db.clone()))
+            .or(player_delete(db))
+    }
+
+    fn player_info_by_nickname(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
+        warp::path::param::<String>()
             .and(warp::path::end())
             .and(warp::get())
             .and(with_db(db.clone()))
-            .and_then(handlers::player_nickname);
-        let update_player_info = warp::path::param::<String>()
-            .and(warp::path("update"))        
+            .and_then(handlers::player_nickname)
+    }   
+
+    fn player_delete(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
+        warp::path::param::<String>()
+        .and(warp::delete())
+        .and(warp::path("delete"))
+        .and(warp::path::end())
+        .and(with_db(db.clone()))
+        .and_then(handlers::player_delete)
+    }   
+    
+    fn player_update(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
+        warp::path::param::<String>()
+            .and(warp::path("update"))
             .and(warp::path::end())
             .and(warp::patch())
             .and(json_body_player())
             .and(with_db(db))
-            .and_then(handlers::player_update);
-
-        get_player_info.or(update_player_info)
+            .and_then(handlers::player_update)
     }
-
-    // fn player_update(nickname: String, db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
-    //     warp::path("update")
-    //         .and(warp::path::end())
-    //         .and(warp::patch())
-    //         .and(with_nickname(nickname))
-    //         .and(json_body_player())
-    //         .and(with_db(db))
-    //         .and_then(handlers::player_update)
-    // }
 
     fn with_db(db: Database) -> impl Filter<Extract = (Database,), Error = std::convert::Infallible> + Clone {
         warp::any().map(move || db.clone())
@@ -95,6 +102,9 @@ mod filters {
 }
 
 mod handlers {
+    use hyper::Error;
+    use warp::{http::status::StatusCode, reply::Reply};
+
     use crate::models::{Database, Player, PlayerRegisterForm};
 
     pub async fn test_fn(db: Database) -> Result<impl warp::Reply, warp::Rejection>  {
@@ -110,7 +120,27 @@ mod handlers {
     }
 
     pub async fn player_register(new_player: PlayerRegisterForm, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
-        Ok(warp::reply::html(format!("register new player {} nickname", new_player.nickname)))
+        let db_response = db.lock().await.execute("insert into players (nickname, email, password_hash) values (?1, ?2, ?3);", [&new_player.nickname, &new_player.email, &new_player.password_hash]);
+        match db_response {
+            Ok(_) => Ok(warp::reply::with_status("CREATED", StatusCode::CREATED)),
+            Err(massage) => {
+                println!("{massage}");
+                Ok(warp::reply::with_status("ERROR_WITH_DB", StatusCode::INTERNAL_SERVER_ERROR))
+            },
+            // Error(error_massage) => Err(warp::reject::custom(error_on_db)),
+        }
+    }
+    
+    pub async fn player_delete(nickname: String, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
+        let db_response = db.lock().await.execute("delete from players where nickname = ?1;", [&nickname]);
+        match db_response {
+            Ok(_) => Ok(warp::reply::with_status("DELETED", StatusCode::OK)),
+            Err(massage) => {
+                println!("{massage}");
+                Ok(warp::reply::with_status("ERROR_WITH_DB", StatusCode::INTERNAL_SERVER_ERROR))
+            },
+            // Error(error_massage) => Err(warp::reject::custom(error_on_db)),
+        }
     }
 }
 
@@ -159,7 +189,7 @@ mod tests {
         let db = models::open_db("data/balamut.sqlitedb");
         let api = filters::balamut(db);
 
-        const names: [&str; 6] = ["daniel", "nikita", "ivan", "denis", "serega", "misha"];
+        let names: [&str; 6] = ["daniel", "nikita", "ivan", "denis", "serega", "misha"];
         let mut register_forms = Vec::with_capacity(names.len());
 
         for i in 0..names.len() {
@@ -175,12 +205,22 @@ mod tests {
         for register_form in &register_forms {
             let response = request()
             .method("POST")
-            .path("/players/register")
+            .path("/player/register")
             .json(register_form)
             .reply(&api)
             .await;
 
-        assert_eq!(response.status(), StatusCode::CREATED);
+            assert_eq!(response.status(), StatusCode::CREATED);
         }
+
+        // for name in &names {
+        //     let response = request()
+        //     .method("DELETE")
+        //     .path(&format!("/player/{name}/delete"))
+        //     .reply(&api)
+        //     .await;
+
+        //     assert_eq!(response.status(), StatusCode::OK);
+        // }
     }
 }
