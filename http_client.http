@@ -2,13 +2,26 @@ POST http://localhost:3030/player/register HTTP/1.1
 content-type: application/json
 
 {
-    "nickname": "danil",
-    "email": "danil@gmail.com",
+    "nickname": "ilya",
+    "email": "ilya@gmail.com",
     "password_hash": "adsfosndvosjdijfosdf"
 }
 
 
 
+DELETE http://localhost:3030/player/danil/delete HTTP/1.1
 
 
-DELETE  http://localhost:3030/player/danil/delete HTTP/1.1
+
+GET http://localhost:3030/player/ilya HTTP/1.1
+
+
+
+PATCH http://localhost:3030/player/ilya/update HTTP/1.1
+content-type: application/json
+
+{
+    "email": "ilya_top_1@gmail.com",
+    "password_hash": "adsfosndvosjdijfosdf",
+    "avatar_img": null
+}
