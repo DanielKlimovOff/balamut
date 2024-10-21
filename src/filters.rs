@@ -20,6 +20,7 @@ fn data() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection>
 fn pages() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
     home_page()
         .or(player_info_page())
+        .or(login_page())
 }
 
 fn images() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
@@ -32,6 +33,13 @@ fn home_page() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejec
     warp::path::end()
         .and(warp::get())
         .and(warp::fs::file("./pages/home/home.html"))
+}
+
+fn login_page() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
+    warp::path("login")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(warp::fs::file("./pages/login/login.html"))
 }
 
 fn player_info_page() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
@@ -52,7 +60,10 @@ fn support_files() -> impl Filter<Extract = (impl warp::Reply,), Error = warp::R
 
 fn api(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
     warp::path("api")
-        .and(player(db.clone()))
+        .and(player(db.clone())
+            .or(login(db.clone()))
+    )
+
 }
 
 fn player(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
@@ -60,6 +71,16 @@ fn player(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = wa
         player_register(db.clone())
             .or(player_nickname(db))
     )
+}
+
+fn login(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {
+    warp::path("login")
+        .and(warp::path::end())
+        .and(warp::get())
+        .and(warp::header::exact("WWW-Authenticate", "Basic"))
+        .and(warp::header("Authorization"))
+        .and(with_db(db))
+        .and_then(handlers::login)
 }
 
 fn player_register(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone  {

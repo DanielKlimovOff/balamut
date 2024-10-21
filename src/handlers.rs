@@ -3,6 +3,11 @@ use warp::{http::status::StatusCode, reply::Reply};
 
 use crate::models::{Database, Player, PlayerUpdateForm};
 
+pub async fn login(auth: String, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
+    println!("{auth}");
+    Ok(warp::reply())
+}
+
 pub async fn player_update(nickname: String, player: PlayerUpdateForm, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
     let db_response = db.lock().await.execute(
         "update players set email=?1, password_hash=?2, has_avatar=?3 where nickname=?4",

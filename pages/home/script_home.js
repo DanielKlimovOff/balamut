@@ -11,7 +11,7 @@ function find_player() {
 }
 
 function login() {
-    alert('login')
+    window.location.href = "/login";
 }
 
 function register() {
