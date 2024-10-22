@@ -7,7 +7,7 @@ async function login() {
     let auth = btoa(nickname.value + ":" + password.value)
     console.log(nickname.value + ":" + password.value)
     console.log(auth)
-    const response = await fetch("http://localhost:3030/api/login", {
+    const response = await fetch("http://localhost:3030/api/player/login", {
         method: "GET",
         headers: {
             "WWW-Authenticate": "Basic",
@@ -18,12 +18,9 @@ async function login() {
     console.log(response)
 
     if (!response.ok) {
-        window.location.replace("/");
-        throw new Error(`Response status: ${response.status}`);
+        // window.location.replace("/");
+        return
+        // throw new Error(`Response status: ${response.status}`);
     }
-
-    let player_info = await response.json();
-    console.log(player_info);
-
-    return false;
+    window.location.replace("/");
 }

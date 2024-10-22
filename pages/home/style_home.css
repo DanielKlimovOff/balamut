@@ -7,3 +7,19 @@ div.center {
     top: 20%;
     left: 20%;
 }
+
+div.right {
+    position: absolute;
+    top: 2%;
+    right: 5%;
+}
+
+img {
+    /* visibility: hidden; */
+    width: 50px;
+}
+
+h3 {
+    display: inline;
+    color: darkgreen;
+}
