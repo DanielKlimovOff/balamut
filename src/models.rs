@@ -19,7 +19,7 @@ pub struct Player {
 pub struct PlayerUpdateForm {
     pub email: Option<String>,
     pub password_hash: Option<String>,
-    pub has_avatar: bool,
+    // pub has_avatar: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]

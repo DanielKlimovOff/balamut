@@ -171,6 +171,7 @@ fn player_update(db: Database) -> impl Filter<Extract = (impl warp::Reply,), Err
         .and(warp::path("update"))
         .and(warp::path::end())
         .and(warp::patch())
+        .and(warp::cookie("session"))
         .and(json_body_player_update_form())
         .and(with_db(db))
         .and_then(handlers::player_update)

@@ -19,29 +19,56 @@ pub async fn player_login(address: Option<SocketAddr>, agent: String, auth: Stri
     Ok(warp::reply::with_header(warp::reply(), "set-cookie", format!("session={session_hash}; path=/")))
 }
 
-pub async fn player_update(nickname: String, player: PlayerUpdateForm, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
-    let db_response = db.lock().await.execute(
-        "update players set email=?1, password_hash=?2, has_avatar=?3 where nickname=?4",
-        params![
-            &player.email,
-            &player.password_hash,
-            &player.has_avatar,
-            &nickname,
-    ]);
-    match db_response {
-        Ok(_) => Ok(warp::reply::with_status("UPDATED", StatusCode::OK).into_response()),
-        Err(massage) => {
-            println!("{massage}");
-            Ok(warp::reply::with_status("ERROR_WITH_DB", StatusCode::INTERNAL_SERVER_ERROR).into_response())
-        },
-        // Error(error_massage) => Err(warp::reject::custom(error_on_db)),
+pub async fn player_update(nickname: String, session_hash: String, player: PlayerUpdateForm, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
+    println!("i in update");
+    println!("{session_hash}");
+    let db_response = db.lock().await.query_row("select player from sessions where hash = ?1;",
+    [&session_hash], |row| Ok(row.get(0)?));
+    if let Err(err) = db_response {
+        println!("db error 1");
+        return Err(warp::reject());
     }
+    let caller_nickname: String = db_response.unwrap();
+    println!("{caller_nickname} {nickname}");
+    
+    if caller_nickname != nickname {
+        println!("db error 2");
+        return  Err(warp::reject());
+    }
+
+    let fields = ["email", "password_hash"];
+
+    for field in fields {
+        let mut sql_statment = "update players set ".to_string();
+        sql_statment += match field {
+            "email": player.email,
+        }
+        let db_response = db.lock().await.execute(
+            format!("update players set email=?1 where nickname=?2", ),
+            params![
+                &player.email,
+                &player.password_hash,
+                // &player.has_avatar,
+                &nickname,
+        ]);
+        match db_response {
+            Ok(_) => 
+            Err(massage) => {
+                println!("{massage}");
+                Ok(warp::reply::with_status("ERROR_WITH_DB", StatusCode::INTERNAL_SERVER_ERROR).into_response())
+            },
+            // Error(error_massage) => Err(warp::reject::custom(error_on_db)),
+        }
+    }
+
+    Ok(warp::reply::with_status("UPDATED", StatusCode::OK).into_response())
 }
 
 pub async fn player_info(nickname: String, db: Database) -> Result<impl warp::Reply, warp::Rejection> {
     if models::RESERVED_NICKNAMES.contains(&nickname.as_str()) {
         return Err(warp::reject())
     }
+
     let db_response = db.lock().await.query_row("select nickname, email, has_avatar, rating from players where nickname = ?1;", [&nickname], |row| Ok(Player{
         nickname: row.get::<usize, String>(0)?,
         email: row.get::<usize, String>(1)?,

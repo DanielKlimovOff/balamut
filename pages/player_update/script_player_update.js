@@ -12,8 +12,8 @@ onload = init
 enter_button.onclick = enter
 cancel_button.onclick = cancel
 
-async function init() {
-    const response = await fetch("http://localhost:3030/api/player/" +  nickname, {
+async function init() {    
+    let response = await fetch("http://localhost:3030/api/player/" +  nickname, {
         method: "GET",
     });
 
@@ -24,6 +24,23 @@ async function init() {
 
     let player_info = await response.json();
     console.log(player_info);
+
+    response = await fetch("http://localhost:3030/api/player/whoami", {
+        method: "GET",
+    });
+
+    if (!response.ok) {
+        // window.location.replace("/");
+        // throw new Error(`Response status: ${response.status}`);
+        return
+    }
+
+    my_info = await response.json();
+
+    if (my_info.nickname != player_info.nickname) {
+        window.location.href = '/'
+        return
+    }
 
     nickname_label.innerHTML = player_info.nickname
     email_label.innerHTML = player_info.email
@@ -51,24 +68,52 @@ async function enter() {
     let updated_player_info = {
         email: null,
         password_hash: null,
-        has_avatar: null,
     }
+
+    let need_to_update = false;
+
     let password = password_textbox.value
     if (password != '') {
         console.log('check')
+        need_to_update = true
+        let auth = btoa(nickname + ":" + password)
+        updated_player_info.password_hash = auth
     }
 
     let email = email_textbox.value
     if (email != '') {
         console.log('check')
+        need_to_update = true
+        updated_player_info.email = email
     }
 
-    let files = new_avatar_file.files
-    if (files.length > 0) {
-        let avatar = files[0]
+    console.log(password, email)
+    if (need_to_update) {
+        const response = await fetch("http://localhost:3030/api/player/" + nickname + '/update', {
+            method: "PATCH",
+            headers: {
+                'Content-Type': 'application/json; charset=utf-8'
+            },
+            body: JSON.stringify(updated_player_info)
+        });
+    
+        console.log(response)
+    
+        if (!response.ok) {
+            // throw new Error(`Response status: ${response.status}`);
+            return
+        }
     }
 
-    console.log(password, email, files)
+    // let files = new_avatar_file.files
+    // if (files.length > 0) {
+    //     let avatar = files[0]
+    //     // file.size
+    // }
+
+    // let formData = new FormData();
+    // formData.append("avatar", photo);
+    // const response = await fetch('http://localhost:3030/api/player/' + nickname + 'upload_image', {method: "POST", body: formData});
 }
 
 async function cancel() {
